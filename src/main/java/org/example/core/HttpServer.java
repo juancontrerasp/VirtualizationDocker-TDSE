@@ -42,8 +42,8 @@ public class HttpServer {
             System.err.println("Could not listen on port: 35000.");
             System.exit(1);
         }
-        System.out.println("🚀 HTTP Server started on port 35000 (concurrent mode)");
-        System.out.println("📍 Press Ctrl+C to shutdown gracefully");
+        System.out.println("HTTP Server started on port 35000 (concurrent mode)");
+        System.out.println("Press Ctrl+C to shutdown");
         
         while (running) {
             Socket clientSocket = null;
@@ -68,7 +68,7 @@ public class HttpServer {
     }
 
     public static void gracefulShutdown() {
-        System.out.println("\n⏹️  Shutdown signal received. Closing server gracefully...");
+        System.out.println("\n⏹️  Shutdown signal received. Closing server ...");
         running = false;
         
         if (serverSocket != null && !serverSocket.isClosed()) {
