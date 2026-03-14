@@ -18,6 +18,8 @@ public class HttpServer {
     public static String staticFilesLocation = null;
     private static String appPath = "";
     private static int threadCounter = 0;
+    private static volatile boolean running = true;
+    private static ServerSocket serverSocket = null;
 
     public static void staticfiles(String location) {
         staticFilesLocation = location;
@@ -32,7 +34,8 @@ public class HttpServer {
     }
 
     public static void main(String[] args) throws IOException, URISyntaxException {
-        ServerSocket serverSocket = null;
+        setupShutdownHook();
+        
         try {
             serverSocket = new ServerSocket(35000);
         } catch (IOException e) {
@@ -40,7 +43,8 @@ public class HttpServer {
             System.exit(1);
         }
         System.out.println("🚀 HTTP Server started on port 35000 (concurrent mode)");
-        boolean running = true;
+        System.out.println("📍 Press Ctrl+C to shutdown gracefully");
+        
         while (running) {
             Socket clientSocket = null;
             try {
@@ -50,11 +54,33 @@ public class HttpServer {
                 Thread clientThread = new Thread(new ClientHandler(clientSocket), "Client-" + threadCounter);
                 clientThread.start();
             } catch (IOException e) {
-                System.err.println("Accept failed.");
-                System.exit(1);
+                if (running) {
+                    System.err.println("Accept failed: " + e.getMessage());
+                }
             }
         }
-        serverSocket.close();
+    }
+
+    private static void setupShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            gracefulShutdown();
+        }, "ShutdownHook"));
+    }
+
+    public static void gracefulShutdown() {
+        System.out.println("\n⏹️  Shutdown signal received. Closing server gracefully...");
+        running = false;
+        
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            try {
+                serverSocket.close();
+                System.out.println("✅ Server socket closed");
+            } catch (IOException e) {
+                System.err.println("Error closing server socket: " + e.getMessage());
+            }
+        }
+        
+        System.out.println("✅ HTTP Server stopped");
     }
 
     public static void get(String path, WebMethod wm){
