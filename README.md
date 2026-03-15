@@ -3,7 +3,7 @@
 ## Juan Pablo Contreras Parra
 
 A custom lightweight web framework built from scratch in Java, demonstrating how annotation-driven HTTP frameworks like Spring Boot work under the hood. The project implements classpath scanning, custom annotations, reflection-based routing, and a raw Java HTTP server.
-
+This project was deployed in AWS using docker thanks to the professor's guide
 ---
 
 ## Table of Contents
@@ -129,6 +129,10 @@ src/
 git clone <repository-url>
 cd Arquitectura_Servidores_de_Aplicaciones-TDSE
 
+mvn clean package
+
+mvn dependency:copy-dependencies -DoutputDirectory=target/dependency
+
 # Compile
 ./mvnw compile
 ```
@@ -210,6 +214,10 @@ docker-compose up --build
 # Compile first
 ./mvnw compile
 
+#Copy dependencies
+mvn clean package
+mvn dependency:copy-dependencies -DoutputDirectory=target/dependency
+
 # Run
 java -cp target/classes org.example.app.DemoApplication
 ```
@@ -220,12 +228,12 @@ The server starts on **[http://localhost:35000](http://localhost:35000)**.
 
 ## Available Endpoints
 
-| Method | Path | Query Params | Example Response |
-|---|---|---|---|
+| Method | Path | Query Params | Example Response              |
+|---|---|---|-------------------------------|
 | GET | `/` | — | `Greetings from Spring Boot!` |
-| GET | `/pi` | — | `PI: 3.141592653589793` |
-| GET | `/hello` | — | `Hello World` |
-| GET | `/greeting` | `name` (default: `World`) | `Hola Alice` |
+| GET | `/pi` | — | `PI: 3.141592653589793`       |
+| GET | `/hello` | — | `Hello World`                 |
+| GET | `/greeting` | `name` (default: `World`) | `Hola Juan`                   |
 
 Example requests:
 
@@ -233,7 +241,7 @@ Example requests:
 curl http://localhost:35000/
 curl http://localhost:35000/pi
 curl http://localhost:35000/hello
-curl http://localhost:35000/greeting?name=Alice
+curl http://localhost:35000/greeting?name=Juan
 ```
 
 ---
