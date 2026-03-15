@@ -4,6 +4,12 @@
 
 A custom lightweight web framework built from scratch in Java, demonstrating how annotation-driven HTTP frameworks like Spring Boot work under the hood. The project implements classpath scanning, custom annotations, reflection-based routing, and a raw Java HTTP server.
 This project was deployed in AWS using docker thanks to the professor's guide
+
+
+### Deployment proof video:
+
+https://youtu.be/xDoRNAgK2Ms
+
 ---
 
 ## Table of Contents
