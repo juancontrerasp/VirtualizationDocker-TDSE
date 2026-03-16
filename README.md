@@ -5,6 +5,17 @@
 A custom lightweight web framework built from scratch in Java, demonstrating how annotation-driven HTTP frameworks like Spring Boot work under the hood. The project implements classpath scanning, custom annotations, reflection-based routing, and a raw Java HTTP server.
 This project was deployed in AWS using docker thanks to the professor's guide
 
+### Concurrent Request Handling
+
+This server uses a **thread-per-request concurrency model** to handle multiple clients simultaneously:
+
+- **Thread Pool**: Each incoming client connection spawns a new Java `Thread` running a `ClientHandler` (implements `Runnable`)
+- **Non-blocking**: The main server loop immediately returns to accepting new connections instead of blocking on request handling
+- **Concurrent Execution**: Multiple client threads run in parallel, allowing the server to serve multiple requests simultaneously
+- **Named Threads**: Each thread is named `Client-1`, `Client-2`, etc. for easy debugging and monitoring in server logs
+- **Thread-Safe Shutdown**: Uses a volatile `running` flag and Java shutdown hooks to gracefully stop the server on `Ctrl+C`
+
+Example: If 3 clients connect simultaneously, the server spawns 3 threads that process their requests in parallel, then closes their connections independently.
 
 ### Deployment proof video:
 
@@ -14,14 +25,15 @@ https://youtu.be/xDoRNAgK2Ms
 
 ## Table of Contents
 
-1. [Architecture & Design](#architecture--design)
-2. [Project Structure](#project-structure)
-3. [Installation](#installation)
-4. [Docker Build & Deployment](#docker-build--deployment)
-5. [Running the Server](#running-the-server)
-6. [Available Endpoints](#available-endpoints)
-7. [Running Tests](#running-tests)
-8. [AWS EC2 Deployment](#aws-ec2-deployment)
+1. [Concurrent Request Handling](#concurrent-request-handling)
+2. [Architecture & Design](#architecture--design)
+3. [Project Structure](#project-structure)
+4. [Installation](#installation)
+5. [Docker Build & Deployment](#docker-build--deployment)
+6. [Running the Server](#running-the-server)
+7. [Available Endpoints](#available-endpoints)
+8. [Running Tests](#running-tests)
+9. [AWS EC2 Deployment](#aws-ec2-deployment)
 
 ---
 
