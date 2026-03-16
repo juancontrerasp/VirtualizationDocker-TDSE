@@ -3,18 +3,37 @@
 ## Juan Pablo Contreras Parra
 
 A custom lightweight web framework built from scratch in Java, demonstrating how annotation-driven HTTP frameworks like Spring Boot work under the hood. The project implements classpath scanning, custom annotations, reflection-based routing, and a raw Java HTTP server.
+This project was deployed in AWS using docker thanks to the professor's guide
+
+### Concurrent Request Handling
+
+This server uses a **thread-per-request concurrency model** to handle multiple clients simultaneously:
+
+- **Thread Pool**: Each incoming client connection spawns a new Java `Thread` running a `ClientHandler` (implements `Runnable`)
+- **Non-blocking**: The main server loop immediately returns to accepting new connections instead of blocking on request handling
+- **Concurrent Execution**: Multiple client threads run in parallel, allowing the server to serve multiple requests simultaneously
+- **Named Threads**: Each thread is named `Client-1`, `Client-2`, etc. for easy debugging and monitoring in server logs
+- **Thread-Safe Shutdown**: Uses a volatile `running` flag and Java shutdown hooks to gracefully stop the server on `Ctrl+C`
+
+Example: If 3 clients connect simultaneously, the server spawns 3 threads that process their requests in parallel, then closes their connections independently.
+
+### Deployment proof video:
+
+https://youtu.be/xDoRNAgK2Ms
 
 ---
 
 ## Table of Contents
 
-1. [Architecture & Design](#architecture--design)
-2. [Project Structure](#project-structure)
-3. [Installation](#installation)
-4. [Running the Server](#running-the-server)
-5. [Available Endpoints](#available-endpoints)
-6. [Running Tests](#running-tests)
-7. [AWS EC2 Deployment](#aws-ec2-deployment)
+1. [Concurrent Request Handling](#concurrent-request-handling)
+2. [Architecture & Design](#architecture--design)
+3. [Project Structure](#project-structure)
+4. [Installation](#installation)
+5. [Docker Build & Deployment](#docker-build--deployment)
+6. [Running the Server](#running-the-server)
+7. [Available Endpoints](#available-endpoints)
+8. [Running Tests](#running-tests)
+9. [AWS EC2 Deployment](#aws-ec2-deployment)
 
 ---
 
@@ -77,30 +96,40 @@ Browser → TCP connect → ServerSocket.accept()
 ```
 src/
 ├── main/
-│   ├── java/org/example/demo/
-│   │   ├── DemoApplication.java       # Bootstrap & classpath scanner
-│   │   ├── HttpServer.java            # Custom HTTP server (port 35000)
-│   │   ├── HelloController.java       # @RestController — basic endpoints
-│   │   ├── GreetingController.java    # @RestController — /greeting?name=
-│   │   ├── RestController.java        # Custom @RestController annotation
-│   │   ├── GetMapping.java            # Custom @GetMapping annotation
-│   │   ├── RequestParam.java          # Custom @RequestParam annotation
-│   │   ├── Route.java                 # Functional interface for handlers
-│   │   ├── WebMethod.java             # Simplified handler interface
-│   │   ├── Request.java               # Query parameter DTO
-│   │   ├── Response.java              # Response placeholder
-│   │   ├── ManualTests.java           # Framework-free test runner
-│   │   ├── ReflexionNavigator.java    # Reflection demo utility
-│   │   └── InvokeMain.java            # Dynamic main() invoker demo
+│   ├── java/org/example/
+│   │   ├── annotation/
+│   │   │   ├── RestController.java        # Custom @RestController annotation
+│   │   │   ├── GetMapping.java            # Custom @GetMapping annotation
+│   │   │   └── RequestParam.java          # Custom @RequestParam annotation
+│   │   ├── core/
+│   │   │   ├── HttpServer.java            # Custom HTTP server (port 35000)
+│   │   │   ├── ClientHandler.java         # Concurrent client request handler
+│   │   │   ├── Request.java               # Query parameter DTO
+│   │   │   ├── Response.java              # Response placeholder
+│   │   │   ├── Route.java                 # Functional interface for handlers
+│   │   │   └── WebMethod.java             # Simplified handler interface
+│   │   ├── controller/
+│   │   │   ├── HelloController.java       # @RestController — basic endpoints
+│   │   │   └── GreetingController.java    # @RestController — /greeting?name=
+│   │   ├── framework/
+│   │   │   ├── ReflexionNavigator.java    # Reflection demo utility
+│   │   │   └── InvokeMain.java            # Dynamic main() invoker demo
+│   │   └── app/
+│   │       ├── DemoApplication.java       # Bootstrap & classpath scanner
+│   │       ├── ManualTests.java           # Framework-free test runner
+│   │       └── ConcurrencyDemo.java       # Concurrent request demonstrator
 │   └── resources/
 │       └── application.properties
 └── test/
-    └── java/org/example/demo/
-        ├── HelloControllerTest.java
-        ├── GreetingControllerTest.java
-        ├── RequestTest.java
-        ├── HttpServerTest.java
-        └── AnnotationsTest.java
+    └── java/org/example/
+        ├── annotation/
+        │   └── AnnotationsTest.java
+        ├── controller/
+        │   ├── HelloControllerTest.java
+        │   └── GreetingControllerTest.java
+        └── core/
+            ├── HttpServerTest.java
+            └── RequestTest.java
 ```
 
 ---
@@ -118,8 +147,79 @@ src/
 git clone <repository-url>
 cd Arquitectura_Servidores_de_Aplicaciones-TDSE
 
+mvn clean package
+
+mvn dependency:copy-dependencies -DoutputDirectory=target/dependency
+
 # Compile
 ./mvnw compile
+```
+
+---
+
+## Docker Build & Deployment
+
+### Build the Docker Image
+
+```bash
+# Step 1: Compile and package the project
+./mvnw clean package
+
+# Step 2: Build the Docker image
+docker build -t virtualization-server:latest .
+```
+
+The build process:
+1. Compiles Java source code to `target/classes/`
+2. Copies dependencies to `target/dependency/` (via maven-dependency-plugin)
+3. Docker copies both directories into the container
+4. Sets OpenJDK 23 as the base image
+
+### Run the Docker Container
+
+```bash
+# Run the server in Docker
+docker run -p 35000:6000 virtualization-server:latest
+```
+
+The server will start inside the container and listen on port 35000. Access endpoints at `http://localhost:35000`
+
+### Example Docker Commands
+
+```bash
+# List images
+docker images | grep virtualization-server
+
+# Run with container name
+docker run --name my-server -p 35000:6000 virtualization-server:latest
+
+# View running containers
+docker ps
+
+# Stop the container
+docker stop my-server
+
+# Remove the image
+docker rmi virtualization-server:latest
+```
+
+### Docker Compose (Optional)
+
+Create a `docker-compose.yml` file:
+
+```yaml
+version: '3.8'
+services:
+  web-server:
+    build: .
+    ports:
+      - "35000:6000"
+    container_name: virtualization-server
+```
+
+Then run:
+```bash
+docker-compose up --build
 ```
 
 ---
@@ -132,6 +232,10 @@ cd Arquitectura_Servidores_de_Aplicaciones-TDSE
 # Compile first
 ./mvnw compile
 
+#Copy dependencies
+mvn clean package
+mvn dependency:copy-dependencies -DoutputDirectory=target/dependency
+
 # Run
 java -cp target/classes org.example.app.DemoApplication
 ```
@@ -142,12 +246,12 @@ The server starts on **[http://localhost:35000](http://localhost:35000)**.
 
 ## Available Endpoints
 
-| Method | Path | Query Params | Example Response |
-|---|---|---|---|
+| Method | Path | Query Params | Example Response              |
+|---|---|---|-------------------------------|
 | GET | `/` | — | `Greetings from Spring Boot!` |
-| GET | `/pi` | — | `PI: 3.141592653589793` |
-| GET | `/hello` | — | `Hello World` |
-| GET | `/greeting` | `name` (default: `World`) | `Hola Alice` |
+| GET | `/pi` | — | `PI: 3.141592653589793`       |
+| GET | `/hello` | — | `Hello World`                 |
+| GET | `/greeting` | `name` (default: `World`) | `Hola Juan`                   |
 
 Example requests:
 
@@ -155,10 +259,17 @@ Example requests:
 curl http://localhost:35000/
 curl http://localhost:35000/pi
 curl http://localhost:35000/hello
-curl http://localhost:35000/greeting?name=Alice
+curl http://localhost:35000/greeting?name=Juan
 ```
 
 ---
+
+## AWS Docker
+
+![img_9.png](images/img_9.png)
+
+![img_10.png](images/img_10.png)
+
 
 ## Running Tests
 
@@ -197,44 +308,22 @@ Expected output:
 
 ### SSH Connection
 
-![SSH Connection](images/img.png)
+![SSH Connection](images/img_13.png)
 
 ```bash
-ssh -i "LebronJames.pem" ec2-user@ec2-3-238-81-76.compute-1.amazonaws.com
+ssh -i "LebronJames.pem" ec2-user@ec2-34-228-145-153.compute-1.amazonaws.com
 ```
 
 ---
 
 ### Deploying the Application
 
-![Compilation evidence](images/img_2.png)
+![img_9.png](images/img_9.png)
 
 ---
 
 ### Accessing the Application from a Browser
 
-![Browser1](images/img_3.png)
-![Browser2](images/img_4.png)
-![Browser3](images/img_5.png)
-
-
-
----
-
-### Running Tests on EC2
-
-## Manual Tests
-
-![Manual tests](images/img_7.png)
-
-## JUnit Tests
-
-![AutoTests](images/img_6.png)
-
-```bash
-# JUnit tests
-./mvnw test
-
-# OR manual tests
-java -cp target/classes org.example.demo.ManualTests
-```
+![Browser1](images/img_10.png)
+![Browser2](images/img_11.png)
+![Browser3](images/img_12.png)

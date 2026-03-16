@@ -11,7 +11,7 @@ class HelloControllerTest {
 
     @Test
     void index_returnsGreeting() {
-        assertEquals("Greetings from Spring Boot!", HelloController.index());
+        assertEquals("Greetings!", HelloController.index());
     }
 
     @Test
